@@ -7,7 +7,7 @@ import time
 import random
 HOST = '172.20.10.13' # Standard loopback interface address
 PORT = 65431 # Port to listen on (use ports > 1023)
-N = 200
+N = 1000
 
 sample_num = 0         #0~N-1
 data = []
