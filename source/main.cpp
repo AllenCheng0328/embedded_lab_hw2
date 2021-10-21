@@ -132,7 +132,7 @@ public:
             BSP_GYRO_GetXYZ(pGyroDataXYZ);
             float x = pDataXYZ[0]*SCALE_MULTIPLIER, y = pDataXYZ[1]*SCALE_MULTIPLIER, z = pDataXYZ[2]*SCALE_MULTIPLIER;
             float gx= pGyroDataXYZ[0]*SCALE_MULTIPLIER, gy = pGyroDataXYZ[1]*SCALE_MULTIPLIER, gz = pGyroDataXYZ[2]*SCALE_MULTIPLIER;
-            int len = sprintf(acc_json,"{%d %d %d %d}",((int)(x*10000))/10000, ((int)(y*10000))/10000, ((int)(z*10000))/10000, sample_num);
+            int len = sprintf(acc_json,"%d %d %d %d",((int)(x*10000))/10000, ((int)(y*10000))/10000, ((int)(z*10000))/10000, sample_num);
 
             response = _socket.send(acc_json,len);
             printf("sent %s\n",acc_json);
