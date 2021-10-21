@@ -17,6 +17,12 @@
 #include "mbed.h"
 #include "wifi_helper.h"
 #include "mbed-trace/mbed_trace.h"
+#include <cstdint>
+
+#include "stm32l475e_iot01.h"
+#include "stm32l475e_iot01_gyro.h"
+#include "stm32l475e_iot01_accelero.h"
+#define SCALE_MULTIPLIER    0.05
 
 #if MBED_CONF_APP_USE_TLS_SOCKET
 #include "root_ca_cert.h"
@@ -31,9 +37,9 @@ class SocketDemo {
     static constexpr size_t MAX_MESSAGE_RECEIVED_LENGTH = 100;
 
 #if MBED_CONF_APP_USE_TLS_SOCKET
-    static constexpr size_t REMOTE_PORT = 443; // tls port
+    static constexpr size_t REMOTE_PORT = 65431; // tls port
 #else
-    static constexpr size_t REMOTE_PORT = 80; // standard HTTP port
+    static constexpr size_t REMOTE_PORT = 65431; // standard HTTP port
 #endif // MBED_CONF_APP_USE_TLS_SOCKET
 
 public:
@@ -50,6 +56,12 @@ public:
 
     void run()
     {
+        int16_t pDataXYZ[3] = {0};
+        float pGyroDataXYZ[3] = {0};
+        char acc_json[100];
+        int sample_num = 0;
+        int response = 1;
+
         if (!_net) {
             printf("Error! No network interface found.\r\n");
             return;
@@ -90,7 +102,7 @@ public:
             printf("Error: _socket.set_root_ca_cert() returned %d\n", result);
             return;
         }
-        _socket.set_hostname(MBED_CONF_APP_HOSTNAME);
+        _socket.set_hostname("172.20.10.13");
 #endif // MBED_CONF_APP_USE_TLS_SOCKET
 
         /* now we have to find where to connect */
@@ -114,6 +126,22 @@ public:
             return;
         }
 
+        while (1){
+            ++sample_num;
+            BSP_ACCELERO_AccGetXYZ(pDataXYZ);
+            BSP_GYRO_GetXYZ(pGyroDataXYZ);
+            float x = pDataXYZ[0]*SCALE_MULTIPLIER, y = pDataXYZ[1]*SCALE_MULTIPLIER, z = pDataXYZ[2]*SCALE_MULTIPLIER;
+            float gx= pGyroDataXYZ[0]*SCALE_MULTIPLIER, gy = pGyroDataXYZ[1]*SCALE_MULTIPLIER, gz = pGyroDataXYZ[2]*SCALE_MULTIPLIER;
+            int len = sprintf(acc_json,"{\"x\":%d,\"y\":%d,\"z\":%d,\"s\":%d}",((int)(x*10000))/10000, ((int)(y*10000))/10000, ((int)(z*10000))/10000, sample_num);
+
+            response = _socket.send(acc_json,len);
+            printf("sent %s\n",acc_json);
+            if (0 >= response){
+                printf("Error sending: %d\n", response);
+            }
+            thread_sleep_for(100);
+        }
+
         /* exchange an HTTP request and response */
 
         if (!send_http_request()) {
@@ -130,7 +158,7 @@ public:
 private:
     bool resolve_hostname(SocketAddress &address)
     {
-        const char hostname[] = MBED_CONF_APP_HOSTNAME;
+        const char hostname[] = "172.20.10.13";
 
         /* get the host address */
         printf("\nResolve hostname %s\r\n", hostname);
@@ -251,6 +279,11 @@ private:
 
 int main() {
     printf("\r\nStarting socket demo\r\n\r\n");
+
+    int16_t pDataXYZ[3] = {0};
+    float pGyroDataXYZ[3] = {0};
+    BSP_GYRO_Init();
+    BSP_ACCELERO_Init();
 
 #ifdef MBED_CONF_MBED_TRACE_ENABLE
     mbed_trace_init();
